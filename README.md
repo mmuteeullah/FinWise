@@ -5,7 +5,6 @@ A personal finance iOS app with AI-powered transaction parsing.
 ## Features
 
 - **Smart Transaction Parsing**: Automatic parsing of SMS and email transactions using LLM
-- **PDF Statement Import**: Vision LLM-powered PDF bank statement parsing
 - **Multi-Currency Support**: Live exchange rates with automatic conversion
 - **Budget Management**: Category-based budgets with rollover support
 - **Analytics Dashboard**: 5-tab analytics (Trends, Categories, Income, Merchants, Payment)
