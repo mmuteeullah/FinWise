@@ -61,7 +61,6 @@ FinWise/
 ├── ios/
 │   └── Runner/
 │       ├── AppDelegate.swift  # iOS app delegate
-│       ├── Models/            # Core ML models
 │       └── *.swift            # Native Swift code
 └── test/                      # Tests
 ```
