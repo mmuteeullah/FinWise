@@ -83,14 +83,15 @@ class EmailParser {
 
           print('⏱️ Total parse time: ${totalTime.toStringAsFixed(2)}s (Extract: ${extractTime.toStringAsFixed(2)}s + Parse: ${parseTime.toStringAsFixed(2)}s)');
 
+          final data = llmResult['data'] as Map<String, dynamic>?;
           return ParsingResult.fromLLM(
             success: true,
             transaction: emailTransaction,
             parseTime: totalTime,
-            confidence: llmResult['data']['confidence'] ?? 0.8,
+            confidence: data?['confidence'] ?? 0.8,
             modelUsed: llmResult['model'],
             rawResponse: llmResult['rawResponse'],
-            data: llmResult['data'],
+            data: data,
           );
         } else {
           print('❌ Failed to convert LLM response to transaction');

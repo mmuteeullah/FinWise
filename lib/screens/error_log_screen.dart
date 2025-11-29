@@ -67,6 +67,39 @@ class _ErrorLogScreenState extends State<ErrorLogScreen> {
     );
   }
 
+  Future<void> _clearErrors() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear LLM Error?'),
+        content: const Text('This will clear the cached LLM error. Transaction parsing errors will not be affected.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Clear', style: TextStyle(color: AppTheme.coral)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _llmService.clearLastError();
+      await _loadErrors();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('LLM error cleared'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   void _showFullError(Map<String, dynamic> errorData) {
     showDialog(
       context: context,
@@ -154,6 +187,11 @@ Timestamp: ${_formatDate(errorData['timestamp'] as DateTime)}
         title: const Text('Error Log'),
         elevation: 0,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            onPressed: _clearErrors,
+            tooltip: 'Clear LLM Error',
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadErrors,

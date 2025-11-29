@@ -222,6 +222,12 @@ class LLMService {
     return prefs.getString(_lastErrorKey);
   }
 
+  // Clear last error
+  Future<bool> clearLastError() async {
+    final prefs = await SharedPreferences.getInstance();
+    return await prefs.remove(_lastErrorKey);
+  }
+
   // Get vision parsing enabled status
   Future<bool> isVisionParsingEnabled() async {
     final prefs = await SharedPreferences.getInstance();
@@ -286,7 +292,20 @@ class LLMService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final content = data['choices'][0]['message']['content'];
+        final choices = data['choices'] as List?;
+        if (choices == null || choices.isEmpty) {
+          final error = 'LLM returned empty choices: ${response.body}';
+          await _saveLastError(error);
+          return {'success': false, 'error': error};
+        }
+        final firstChoice = choices[0] as Map<String, dynamic>?;
+        final message = firstChoice?['message'] as Map<String, dynamic>?;
+        final content = message?['content'];
+        if (content == null) {
+          final error = 'LLM returned null content: ${response.body}';
+          await _saveLastError(error);
+          return {'success': false, 'error': error};
+        }
         return {'success': true, 'response': content, 'model': model};
       } else {
         final error = 'API Error ${response.statusCode}: ${response.body}';
@@ -420,7 +439,23 @@ Return just the extracted transaction text (no JSON, no markdown, just plain tex
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final extractedText = (data['choices'][0]['message']['content'] as String).trim();
+        final choices = data['choices'] as List?;
+        if (choices == null || choices.isEmpty) {
+          final error = 'LLM returned empty choices: ${response.body}';
+          RemoteLogger.error('Empty choices in response', error: error, tag: 'LLM_EXTRACT');
+          await _saveLastError(error);
+          return {'success': false, 'error': error};
+        }
+        final firstChoice = choices[0] as Map<String, dynamic>?;
+        final message = firstChoice?['message'] as Map<String, dynamic>?;
+        final contentRaw = message?['content'];
+        if (contentRaw == null) {
+          final error = 'LLM returned null content: ${response.body}';
+          RemoteLogger.error('Null content in response', error: error, tag: 'LLM_EXTRACT');
+          await _saveLastError(error);
+          return {'success': false, 'error': error};
+        }
+        final extractedText = (contentRaw as String).trim();
 
         RemoteLogger.info('✅ Extracted text: "$extractedText"', tag: 'LLM_EXTRACT');
 
@@ -721,7 +756,23 @@ Return ONLY the JSON object - no markdown, no explanation:''';
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final content = data['choices'][0]['message']['content'] as String;
+        final choices = data['choices'] as List?;
+        if (choices == null || choices.isEmpty) {
+          final error = 'LLM returned empty choices: ${response.body}';
+          RemoteLogger.error('Empty choices in response', error: error, tag: 'LLM');
+          await _saveLastError(error);
+          return {'success': false, 'error': error};
+        }
+        final firstChoice = choices[0] as Map<String, dynamic>?;
+        final message = firstChoice?['message'] as Map<String, dynamic>?;
+        final contentRaw = message?['content'];
+        if (contentRaw == null) {
+          final error = 'LLM returned null content: ${response.body}';
+          RemoteLogger.error('Null content in response', error: error, tag: 'LLM');
+          await _saveLastError(error);
+          return {'success': false, 'error': error};
+        }
+        final content = contentRaw as String;
 
         RemoteLogger.info('Raw LLM response: $content', tag: 'LLM');
 
@@ -926,7 +977,23 @@ Start your response with { and end with }. Do not wrap in ```json or any other f
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final content = data['choices'][0]['message']['content'] as String;
+        final choices = data['choices'] as List?;
+        if (choices == null || choices.isEmpty) {
+          final error = 'Vision LLM returned empty choices: ${response.body}';
+          RemoteLogger.error('Empty choices in response', error: error, tag: 'LLM_VISION');
+          await _saveLastError(error);
+          return {'success': false, 'error': error};
+        }
+        final firstChoice = choices[0] as Map<String, dynamic>?;
+        final message = firstChoice?['message'] as Map<String, dynamic>?;
+        final contentRaw = message?['content'];
+        if (contentRaw == null) {
+          final error = 'Vision LLM returned null content: ${response.body}';
+          RemoteLogger.error('Null content in response', error: error, tag: 'LLM_VISION');
+          await _saveLastError(error);
+          return {'success': false, 'error': error};
+        }
+        final content = contentRaw as String;
 
         RemoteLogger.info(
           'Raw vision LLM response: $content',

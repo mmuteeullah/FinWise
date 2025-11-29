@@ -651,8 +651,47 @@ class DatabaseHelper {
 
   // ==================== Card Preference Methods ====================
 
+  bool _cardPrefsTableVerified = false;
+
+  /// Ensure card_preferences table exists (handles failed migrations)
+  Future<void> _ensureCardPrefsTableExists() async {
+    if (_cardPrefsTableVerified) return;
+
+    final db = await database;
+
+    // Check if table exists
+    final tables = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='card_preferences'"
+    );
+
+    if (tables.isEmpty) {
+      print('⚠️ card_preferences table missing - creating it now...');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS card_preferences (
+          account_last_digits TEXT PRIMARY KEY,
+          is_visible INTEGER NOT NULL DEFAULT 1,
+          card_nickname TEXT,
+          card_type TEXT DEFAULT 'credit',
+          card_issuer TEXT,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        )
+      ''');
+
+      await db.execute('''
+        CREATE INDEX IF NOT EXISTS idx_card_visible ON card_preferences (is_visible)
+      ''');
+
+      print('✅ card_preferences table created');
+    }
+
+    _cardPrefsTableVerified = true;
+  }
+
   /// Get card preference by account last digits
   Future<Map<String, dynamic>?> getCardPreference(String accountLastDigits) async {
+    await _ensureCardPrefsTableExists();
     final db = await database;
     final result = await db.query(
       'card_preferences',
@@ -666,12 +705,14 @@ class DatabaseHelper {
 
   /// Get all card preferences
   Future<List<Map<String, dynamic>>> getAllCardPreferences() async {
+    await _ensureCardPrefsTableExists();
     final db = await database;
     return await db.query('card_preferences', orderBy: 'created_at DESC');
   }
 
   /// Get only visible cards
   Future<List<Map<String, dynamic>>> getVisibleCardPreferences() async {
+    await _ensureCardPrefsTableExists();
     final db = await database;
     return await db.query(
       'card_preferences',
@@ -683,6 +724,7 @@ class DatabaseHelper {
 
   /// Insert or update card preference
   Future<void> upsertCardPreference(Map<String, dynamic> cardPref) async {
+    await _ensureCardPrefsTableExists();
     final db = await database;
     final now = DateTime.now().millisecondsSinceEpoch;
 

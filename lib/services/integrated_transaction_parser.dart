@@ -24,14 +24,15 @@ class IntegratedTransactionParser {
 
           if (transaction != null) {
             // LLM parsing successful
+            final data = llmResult['data'] as Map<String, dynamic>?;
             return ParsingResult.fromLLM(
               success: true,
               transaction: transaction,
               parseTime: llmResult['parseTime'],
-              confidence: llmResult['data']['confidence'] ?? 0.8,
+              confidence: data?['confidence'] ?? 0.8,
               modelUsed: llmResult['model'],
               rawResponse: llmResult['rawResponse'],
-              data: llmResult['data'],
+              data: data,
             );
           } else {
             // LLM returned data but conversion failed - fallback to regex

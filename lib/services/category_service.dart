@@ -8,9 +8,83 @@ class CategoryService {
   CategoryService._internal();
 
   final DatabaseHelper _db = DatabaseHelper.instance;
+  bool _tableVerified = false;
+
+  /// Ensure categories table exists (handles failed migrations)
+  Future<void> _ensureTableExists() async {
+    if (_tableVerified) return;
+
+    final db = await _db.database;
+
+    // Check if table exists
+    final tables = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='categories'"
+    );
+
+    if (tables.isEmpty) {
+      print('⚠️ Categories table missing - creating it now...');
+
+      // Create the table
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS categories (
+          id TEXT PRIMARY KEY,
+          name TEXT UNIQUE NOT NULL,
+          is_default INTEGER DEFAULT 0,
+          is_active INTEGER DEFAULT 1,
+          icon_emoji TEXT,
+          color_hex TEXT,
+          created_at INTEGER NOT NULL
+        )
+      ''');
+
+      await db.execute('''
+        CREATE INDEX IF NOT EXISTS idx_categories_active ON categories (is_active)
+      ''');
+      await db.execute('''
+        CREATE INDEX IF NOT EXISTS idx_categories_default ON categories (is_default)
+      ''');
+
+      // Seed default categories
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final defaultCategories = [
+        {'name': 'Food & Dining', 'emoji': '🍔', 'color': 'FF6B35'},
+        {'name': 'Shopping', 'emoji': '🛒', 'color': 'F7931E'},
+        {'name': 'Transportation', 'emoji': '🚗', 'color': '4A90E2'},
+        {'name': 'Bills & Utilities', 'emoji': '💡', 'color': '7B68EE'},
+        {'name': 'Entertainment', 'emoji': '🎬', 'color': 'E91E63'},
+        {'name': 'Healthcare', 'emoji': '🏥', 'color': 'E53935'},
+        {'name': 'Travel', 'emoji': '✈️', 'color': '00ACC1'},
+        {'name': 'Groceries', 'emoji': '🥬', 'color': '43A047'},
+        {'name': 'Education', 'emoji': '📚', 'color': '3949AB'},
+        {'name': 'Salary', 'emoji': '💰', 'color': '00897B'},
+        {'name': 'Investment', 'emoji': '📈', 'color': '1E88E5'},
+        {'name': 'Transfer', 'emoji': '↔️', 'color': '757575'},
+        {'name': 'Uncategorized', 'emoji': '❓', 'color': 'BDBDBD'},
+        {'name': 'Other', 'emoji': '📦', 'color': '9E9E9E'},
+      ];
+
+      for (final cat in defaultCategories) {
+        final id = '${now}_${cat['name']!.hashCode}';
+        await db.insert('categories', {
+          'id': id,
+          'name': cat['name'],
+          'is_default': 1,
+          'is_active': 1,
+          'icon_emoji': cat['emoji'],
+          'color_hex': cat['color'],
+          'created_at': now,
+        });
+      }
+
+      print('✅ Categories table created and seeded with ${defaultCategories.length} categories');
+    }
+
+    _tableVerified = true;
+  }
 
   /// Get all active categories
   Future<List<Category>> getActiveCategories() async {
+    await _ensureTableExists();
     final db = await _db.database;
     final result = await db.query(
       'categories',
@@ -22,6 +96,7 @@ class CategoryService {
 
   /// Get all categories (including inactive)
   Future<List<Category>> getAllCategories() async {
+    await _ensureTableExists();
     final db = await _db.database;
     final result = await db.query(
       'categories',
@@ -38,6 +113,7 @@ class CategoryService {
 
   /// Get category by ID
   Future<Category?> getCategoryById(String id) async {
+    await _ensureTableExists();
     final db = await _db.database;
     final result = await db.query(
       'categories',
@@ -51,6 +127,7 @@ class CategoryService {
 
   /// Get category by name
   Future<Category?> getCategoryByName(String name) async {
+    await _ensureTableExists();
     final db = await _db.database;
     final result = await db.query(
       'categories',
@@ -68,6 +145,7 @@ class CategoryService {
     String? iconEmoji,
     String? colorHex,
   }) async {
+    await _ensureTableExists();
     final db = await _db.database;
 
     // Check if category name already exists (even if inactive)
